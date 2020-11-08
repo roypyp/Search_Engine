@@ -16,6 +16,6 @@ class ReadFile:
         allfiles = glob2.glob(self.corpus_path+"/*/*/*.parquet") +glob2.glob(self.corpus_path+"/*/*.parquet")+glob2.glob(self.corpus_path+"/*.parquet")
         #full_path = os.path.join(self.corpus_path)
         df=[]
-        for parquet in allfiles:
-            df += [(pd.read_parquet(parquet, engine="pyarrow")).values.tolist()]
+
+        df = [(pd.read_parquet(allfiles[0], engine="pyarrow")).values.tolist()]
         return df

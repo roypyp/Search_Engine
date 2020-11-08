@@ -10,6 +10,7 @@ def fun1(word):
     if "_" in word:
         word = word.replace("#", "")
         templist += word.split("_")
+        templist=[x for x in templist if x]
     else:
         word = word.replace("#", "")
         templist += re.findall('([A-Z][a-z]+)', word)
@@ -29,6 +30,7 @@ class Parse:
         #self.secondStop_word =[':',',','?','!','.',"'",'"',"of",'']
         #self.stop_words=self.stop_words+self.secondStop_word
         self.personadic ={}
+        self.positiondic={}
 
     def parse_sentence(self, text):
         """
@@ -37,20 +39,35 @@ class Parse:
         :return:
         """
         #print(self.stop_words)
+        temptextlist=text.split(' ')
+        for i in range(len(temptextlist)):
+            if(self.positiondic.get(temptextlist[i])):
+                self.positiondic[temptextlist[i]].append(i)
+            else:
+                self.positiondic[temptextlist[i]]=[i]
+
         """text_tokens = word_tokenize(text)
         #text_tokens_without_stopwords = [w.lower() for w in text_tokens if w not in self.stop_words]
         return text_tokens_without_stopwords"""
         return_parse=[]
-        #text='RT @revathitweets: Will we get any answers? #TelanganaCovidTruth #WhereIsKCR https://www.instagram.com/p/CD7fAPWs3WM/?igshid=o9kf0ugp1l8x'
-        text = 'RT percent @revathitweets: Will we, get. Alexandria Ocasio-Cortez trouble troubling troubled'
+        #text='RT @revathitweets: Will we get any answers? #TelanganaCovidTruth #WhereIsKCR https://www.instagram.com/p/CD7fAPWs3WM/?igshid=o9kf0ugp1l8x  ½'
+        text = 'RT 5 percent ½ 55.2165 @revathitweets: Will we, get. 1.05.2000 trouble troubling troubled'
         char_to_remove=['.',',','…','\n','?','/',' ','=']
         '''for char in char_to_remove:
             text=text.replace(char,'')'''
         numricset=['thousand','million','billion']
-        text_tokens = re.split("[ \-!?:=\n/…]+",text)
+        text_tokens = re.split("[ \-!?:/=\n…]+",text)
         word = 0
         while word < len(text_tokens):
-            if text_tokens[word][0]=='#':
+            if(text_tokens[word]==""):
+                word+=1
+            elif re.match(r'^\d{2}\.\d{2}\.\d{4}$',text_tokens[word]) or re.match(r'^\d{2}\.\d{2}\.\d{2}$',text_tokens[word] or \
+                    re.match(r'^\d{2}\/\d{2}\/\d{4}$',text_tokens[word]) or  re.match(r'^\d{1}\.\d{2}\.\d{4}$',text_tokens[word]) or \
+                    re.match(r'^\d{1}\.\d{2}\.\d{2}$',text_tokens[word]) or re.match(r'^\d{2}\.\d{1}\.\d{4}$',text_tokens[word]) or \
+                    re.match(r'^\d{2}\.\d{1}\.\d{2}$',text_tokens[word]) ):
+                return_parse += [text_tokens[word]]
+                word += 1
+            elif text_tokens[word][0]=='#':
                 return_parse+=fun1(text_tokens[word])
                 word += 1
             elif text_tokens[word]=='www':
@@ -74,7 +91,8 @@ class Parse:
                 else:
                     return_parse += [ str(num)  + 'K']
                 word += 2
-            elif (text_tokens[word].replace(",","").replace('.','').isnumeric()):
+            elif (text_tokens[word].replace(",","").replace('.','').isdigit()):
+
                 temp = float(text_tokens[word].replace(",",""))
                 if temp>=1000000000:
                     if(temp%1000000000==0):
@@ -103,10 +121,12 @@ class Parse:
                     else:
                         temp = temp / 1
                         temp = round(temp, 3)
-                    return_parse += ["%.3f" % temp ]
+                    return_parse += [ str(temp) ]
                 word += 1
             else:
-                return_parse+=[re.sub('[,.]+','',text_tokens[word])]
+                temp=re.sub("[,.’]+",'',text_tokens[word])
+                if(temp!=""):
+                    return_parse+=[temp]
                 word += 1
         text_tokens_without_stopwords = [w.lower() for w in return_parse if w not in self.stop_words]
         return text_tokens_without_stopwords
@@ -151,18 +171,21 @@ class Parse:
 
 
         doc_length = len(tokenized_text)  # after text operations.
-        lancaster = LancasterStemmer()
-        tempstmeeing=[]
-        for w in tokenized_text:
-            if(lancaster.stem(w) not in tempstmeeing):
-                tempstmeeing+=[lancaster.stem(w)]
 
-        tokenized_text=tempstmeeing
+        tempstmeeing = []
+        lancaster = LancasterStemmer()
+        for w in tokenized_text:
+            if (lancaster.stem(w) not in tempstmeeing):
+                tempstmeeing += [lancaster.stem(w)]
+        tokenized_text = tempstmeeing
+
+
         for term in tokenized_text:
             if term not in term_dict.keys():
                 term_dict[term] = 1
             else:
                 term_dict[term] += 1
+
 
         document = Document(tweet_id, tweet_date, full_text, url, retweet_text, retweet_url, quote_text,
                             quote_url, term_dict, doc_length)
