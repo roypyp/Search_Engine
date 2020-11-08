@@ -3,6 +3,7 @@ from configuration import ConfigClass
 from parser_module import Parse
 from indexer import Indexer
 from searcher import Searcher
+import os
 import utils
 
 
@@ -18,9 +19,10 @@ def run_engine():
     p = Parse()
     indexer = Indexer(config)
 
-    documents_list = r.read_file(file_name='covid19_07-08.snappy.parquet')
+    documents_list = r.read_file()#file_name='covid19_07-08.snappy.parquet'
     # Iterate over every document in the file
-    for idx, document in enumerate(documents_list):
+
+    for idx, document in enumerate(documents_list[0]):
         # parse the document
         parsed_document = p.parse_doc(document)
         number_of_documents += 1
