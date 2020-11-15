@@ -1,3 +1,5 @@
+import time
+
 from reader import ReadFile
 from configuration import ConfigClass
 from parser_module import Parse
@@ -21,13 +23,14 @@ def run_engine():
 
     documents_list = r.read_file()#file_name='covid19_07-08.snappy.parquet'
     # Iterate over every document in the file
-
     for idx, document in enumerate(documents_list[0]):
         # parse the document
         parsed_document = p.parse_doc(document)
         number_of_documents += 1
         # index the document data
-        indexer.add_new_doc(parsed_document)
+        #if number_of_documents==130:
+        print(number_of_documents)
+        #indexer.add_new_doc(parsed_document)
     print('Finished parsing and indexing. Starting to export files')
 
     utils.save_obj(indexer.inverted_idx, "inverted_idx")
@@ -50,7 +53,10 @@ def search_and_rank_query(query, inverted_index, k):
 
 
 def main():
+    start_time = time.time()
+    print("--- %s seconds ---" % (time.time() - start_time))
     run_engine()
+    print("--- %s seconds ---" % (time.time() - start_time))
     query = input("Please enter a query: ")
     k = int(input("Please enter number of docs to retrieve: "))
     inverted_index = load_index()

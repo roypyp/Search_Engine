@@ -2,6 +2,8 @@ import os
 import pandas as pd
 import glob2
 
+
+
 class ReadFile:
     def __init__(self, corpus_path):
         self.corpus_path = corpus_path
@@ -17,5 +19,8 @@ class ReadFile:
         #full_path = os.path.join(self.corpus_path)
         df=[]
 
+
         df = [(pd.read_parquet(allfiles[0], engine="pyarrow")).values.tolist()]
+
+
         return df
