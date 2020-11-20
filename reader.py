@@ -7,7 +7,11 @@ import glob2
 class ReadFile:
     def __init__(self, corpus_path):
         self.corpus_path = corpus_path
-
+        self.allfiles = glob2.glob(self.corpus_path + "/*/*/*.parquet") + glob2.glob(self.corpus_path + "/*/*.parquet") + glob2.glob(self.corpus_path + "/*.parquet")
+        self.int=0
+        self.maxlen=len(self.allfiles)
+    def readonefile(self,i):
+        return [(pd.read_parquet(self.allfiles[i], engine="pyarrow")).values.tolist()]
     def read_file(self):
         """
         This function is reading a parquet file contains several tweets
@@ -15,12 +19,10 @@ class ReadFile:
         :param file_name: string - indicates the path to the file we wish to read.
         :return: a dataframe contains tweets.
         """
-        allfiles = glob2.glob(self.corpus_path+"/*/*/*.parquet") +glob2.glob(self.corpus_path+"/*/*.parquet")+glob2.glob(self.corpus_path+"/*.parquet")
+
         #full_path = os.path.join(self.corpus_path)
-        df=[]
 
-
-        df = [(pd.read_parquet(allfiles[0], engine="pyarrow")).values.tolist()]
-
+        df = self.readonefile(self.int)
+        self.int+=1
 
         return df

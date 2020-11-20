@@ -1,4 +1,4 @@
-from nltk import LancasterStemmer
+from nltk import PorterStemmer
 from nltk.stem import snowball
 
 
@@ -12,10 +12,7 @@ class Stemmer:
         :param token: string of a token
         :return: stemmed token
         """
-        tempstmeeing = []
-        lancaster = LancasterStemmer()
-        for w in token:
-            if (lancaster.stem(w) not in tempstmeeing):
-                tempstmeeing += [lancaster.stem(w)]
+        Porter = PorterStemmer()
+        tempstmeeing=[Porter.stem(tokens) for tokens in token]
         return tempstmeeing
         #return self.stemmer.stem(token)
