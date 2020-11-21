@@ -43,6 +43,10 @@ def run_engine():
             elif number_of_documents == 140205:
                 print(number_of_documents)
             indexer.add_new_doc(parsed_document)
+            if(number_of_documents==1000):
+                break
+        if (number_of_documents == 1000):
+            break
     print('Finished parsing and indexing. Starting to export files')
 
     utils.save_obj(indexer.inverted_idx, "inverted_idx")
@@ -66,8 +70,8 @@ def search_and_rank_query(query, inverted_index, k,Docment_info=None):
     query_as_list = p.parse_sentence(query)
     searcher = Searcher(inverted_index,Docment_info)
     relevant_docs = searcher.relevant_docs_from_posting(query_as_list)
-    ranked_docs = searcher.ranker.rank_relevant_doc(relevant_docs)
-    return searcher.ranker.retrieve_top_k(ranked_docs, k)
+    #ranked_docs = searcher.ranker.rank_relevant_doc(relevant_docs)
+   # return searcher.ranker.retrieve_top_k(ranked_docs, k)
 
 
 def main():

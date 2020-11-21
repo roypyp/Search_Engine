@@ -235,6 +235,7 @@ class Parse:
                     return_parse+=[temp]
                 word += 1
         #return_parse = [w for w in return_parse if w.lower() not in self.stop_words]
+        return_parse = self.stemmer.stem_term(return_parse)
         return return_parse
 
     def parse_doc(self, doc_as_list):
@@ -276,18 +277,18 @@ class Parse:
         else:
             self.personadic[strtemp] = [tweet_id]'''
 
-        tokenized_text = self.stemmer.stem_term(tokenized_text)
+
         doc_length = len(tokenized_text)  # after text operations.
 
-        maxFrecinDoc= None
+        maxFrecinDoc= 0
         docWordCount=0
         for term in tokenized_text:
             if term not in term_dict.keys():
                 term_dict[term] = 1
             else:
                 term_dict[term] += 1
-            if(maxFrecinDoc == None or term_dict[maxFrecinDoc]<term_dict[term]):
-                maxFrecinDoc=term
+            if(maxFrecinDoc<term_dict[term]):
+                maxFrecinDoc= term_dict[term]
         infoForDoc = maxFrecinDoc
         document = Document(tweet_id, tweet_date, full_text, url, retweet_text, retweet_url, quote_text,
                             quote_url, term_dict, doc_length, infoForDoc)

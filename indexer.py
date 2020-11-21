@@ -48,7 +48,7 @@ class Indexer:
             if(tempp>=len(tempdict)):
                 tempp=-1
             d1 = dict(listForName[i:tempp])
-            filename = listForName[i][0] + "_" + listForName[tempp][0] + ".json"
+            filename = listForName[i][0] + "-" + listForName[tempp][0] + ".json"
             self.postingNames.append(filename)
             self.postingGenrate(filename, d1)
 
@@ -70,7 +70,7 @@ class Indexer:
                     tempdic[listForName[i]]=tempdict[listForName[i]]
                     i+=1
                     print(i , " " , len(listForName)," 1")
-                filename=firstname+"_"+listForName[i-1]+".json"
+                filename=firstname+"-"+listForName[i-1]+".json"
                 self.postingNames.insert(name,filename)
                 self.postingGenrate(filename,tempdic)
                 name+=1
@@ -97,7 +97,7 @@ class Indexer:
                             break
                         d1[listForName[i]]=tempdict[listForName[i]]
                         i+=1
-                    filename = listForName[t][0] + "_" + listForName[i-1][0] + ".json"
+                    filename = listForName[t][0] + "-" + listForName[i-1][0] + ".json"
                     self.postingNames.append(filename)
                     self.postingGenrate(filename, d1)
             else:
@@ -174,7 +174,7 @@ class Indexer:
             except:
                 print('problem with the following key {}'.format(term[0]))
         self.DocmentInfo[document.tweet_id]=[document.infoForDoc]+[document.doc_length]+[len(document_dictionary)]
-        if (self.numofdocment == 60000):
+        if (self.numofdocment == 1000):
             start_time = time.time()
             if(self.firstposting):
                 self.fun1()
