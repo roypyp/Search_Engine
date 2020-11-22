@@ -44,11 +44,13 @@ class Indexer:
         sqrtofterm = math.ceil(len(tempdict) ** 0.5)
         listForName = list(tempdict.items())
         for i in range(0, len(tempdict), sqrtofterm):
-            tempp=sqrtofterm + i-1
+            tempp=sqrtofterm + i
             if(tempp>=len(tempdict)):
-                tempp=-1
-            d1 = dict(listForName[i:tempp])
-            filename = listForName[i][0] + "-" + listForName[tempp][0] + ".json"
+                tempp=len(tempdict)
+                d1 = dict(listForName[i:])
+            else:
+                d1 = dict(listForName[i:tempp])
+            filename = listForName[i][0] + "-" + listForName[tempp-1][0] + ".json"
             self.postingNames.append(filename)
             self.postingGenrate(filename, d1)
 

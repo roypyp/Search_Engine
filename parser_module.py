@@ -283,6 +283,8 @@ class Parse:
         maxFrecinDoc= 0
         docWordCount=0
         for term in tokenized_text:
+            if(len(term)<2):
+                continue
             if term not in term_dict.keys():
                 term_dict[term] = 1
             else:

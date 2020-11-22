@@ -1,6 +1,7 @@
 from numpy import array
 from numpy import diag
 from numpy import dot
+import numpy as np
 from scipy.linalg import svd
 
 class Ranker:
@@ -16,15 +17,23 @@ class Ranker:
         :return: sorted list of documents by score
         """
 
-        A=array(relevant_doc)
-        U,S,V= svd(A)
+        A=np.transpose(array(relevant_doc))
+        U,S,V= svd(A,full_matrices=False)
+
+        print(V.shape)
         X=(S >30).sum()
         print("ss:",X)
         Ut=U[0:,0:X]
         print("ut:_____\n",Ut,"\n")
         St = S[0:X]
+        St=diag(St)
         print("st:_____\n", St, "\n")
-        Vt=(V[0:,0:X]).transpose()
+        Vt=(V[0:X,0:])
+        print(Vt.shape)
+
+        Vt=np.transpose(Vt)
+        print(Vt.shape)
+
         print("vt:_____\n", Vt, "\n")
         return Ut, St, Vt
 
