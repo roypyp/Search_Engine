@@ -5,6 +5,12 @@ from configuration import ConfigClass
 from parser_module import Parse
 from indexer import Indexer
 from searcher import Searcher
+from preparser import Preparse
+import re
+from operator import itemgetter
+import matplotlib.pyplot as plt
+from scipy import special
+import numpy as np
 import json
 
 import os
@@ -19,7 +25,9 @@ def run_engine():
 
     config = ConfigClass()
     r = ReadFile(corpus_path=config.get__corpusPath())
-    p = Parse()
+    persondic=utils.load_obj("persona_dic")
+    p = Parse(persondic)
+    #pre=Preparse()
     indexer = Indexer(config)
     start_time = time.time()
     #file_name='covid19_07-08.snappy.parquet'
@@ -40,20 +48,55 @@ def run_engine():
                 print(number_of_documents)
             elif number_of_documents==1000000:
                 print("--- %s seconds ---" % (time.time() - start_time))
-            elif number_of_documents == 140205:
+            elif number_of_documents == 100000:
                 print(number_of_documents)
             indexer.add_new_doc(parsed_document)
-            if(number_of_documents==1000):
+            if(number_of_documents==100000*5):
                 break
-        if (number_of_documents == 1000):
+        if (number_of_documents == 100000*5):
             break
-    print('Finished parsing and indexing. Starting to export files')
+    lenofindx = len(indexer.inverted_idx)
+    print("num of terms:",lenofindx)
+    print("num of numterms:", indexer.postnumcounter)
+    sortindexser=sorted(list(indexer.inverted_idx.items()),key=lambda item:item[1][1])
+    print(sortindexser[0:10])
+    print('\n\n')
+    print(sortindexser[lenofindx-10:])
+    sortindexser=[]
+    #indexer.add_Persona_Dic(p.personadic)
 
+    frequency = {}
+
+
+
+
+    frequency = {key: value[1] for key, value in list(indexer.inverted_idx.items())}
+
+    # convert value of frequency to numpy array
+
+
+    freqs = list(frequency.values())
+    freqs.sort(reverse=True)
+    epsilon = 10 ** (-6.0)
+    # enumerate the ranks and frequencies
+    rf = [((r + 1)*epsilon, f) for r, f in enumerate(freqs)]
+    rs, fs = zip(*rf)
+
+    plt.clf()
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.title('Zipf plot')
+    plt.xlabel('rank')
+    plt.ylabel('frequency')
+    plt.plot(rs, fs, 'r-')
+    plt.show()
+    print('Finished parsing and indexing. Starting to export files')
+    #utils.save_obj(pre.personadic,"persona_dic")
     utils.save_obj(indexer.inverted_idx, "inverted_idx")
     utils.save_obj(indexer.DocmentInfo, "Docment_info")
     utils.save_obj(indexer.postingNames, "postingNames")
-    utils.save_obj(indexer.postingDict, "posting")
-
+    #utils.save_obj(indexer.postingDict, "posting")
+    utils.save_obj(p.tweet2doc, "tweet2doc")
 
 def load_index():
     print('Load inverted index')
@@ -66,18 +109,19 @@ def doc_info():
     return Docment_info
 
 def search_and_rank_query(query, inverted_index, k,Docment_info=None):
-    p = Parse()
+    persondic = utils.load_obj("persona_dic")
+    p = Parse(persondic)
     query_as_list = p.parse_sentence(query)
-    searcher = Searcher(inverted_index,Docment_info)
+    searcher = Searcher(inverted_index,Docment_info,persondic)
     relevant_docs = searcher.relevant_docs_from_posting(query_as_list)
-    #ranked_docs = searcher.ranker.rank_relevant_doc(relevant_docs)
-   # return searcher.ranker.retrieve_top_k(ranked_docs, k)
+    ranked_docs = searcher.ranker.rank_relevant_doc(relevant_docs)
+    return searcher.ranker.retrieve_top_k(ranked_docs, k)
 
 
 def main():
     start_time = time.time()
     print("--- %s seconds ---" % (time.time() - start_time))
-    run_engine()
+    #run_engine()
     print("--- %s seconds ---" % (time.time() - start_time))
     query = input("Please enter a query: ")
     k = int(input("Please enter number of docs to retrieve: "))

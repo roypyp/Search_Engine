@@ -17,7 +17,7 @@ class Ranker:
         :return: sorted list of documents by score
         """
 
-        A=np.transpose(array(relevant_doc))
+        '''A=np.transpose(array(relevant_doc))
         U,S,V= svd(A,full_matrices=False)
 
         print(V.shape)
@@ -35,9 +35,9 @@ class Ranker:
         print(Vt.shape)
 
         print("vt:_____\n", Vt, "\n")
-        return Ut, St, Vt
+        return Ut, St, Vt'''
 
-        return sorted(relevant_doc.items(), key=lambda item: item[1], reverse=True)
+        return sorted(relevant_doc, key=lambda item: item[1], reverse=True)
 
     @staticmethod
     def retrieve_top_k(sorted_relevant_doc, k=1):

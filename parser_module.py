@@ -3,8 +3,10 @@ from nltk.tokenize import word_tokenize
 from nltk.stem import LancasterStemmer
 from document import Document
 import re
-
 from stemmer import Stemmer
+from gensim.corpora import Dictionary
+import utils
+
 
 from nltk import ne_chunk, pos_tag, word_tokenize
 from nltk.tree import Tree
@@ -26,6 +28,10 @@ def get_continuous_chunks(text):
     return continuous_chunk
 
 def wordSpertor(word):
+    word=word.replace("/","")
+    word = word.replace(",", "")
+    if(len(word)<2):
+        return False
     templist = [word]
     if "_" in word:
         word = word.replace("#", "")
@@ -43,6 +49,7 @@ def wordSpertor(word):
             templist+=[word]
     templist=[x.lower() for x in templist]
 
+
     return templist
 
 def deEmojify(inputString):
@@ -58,14 +65,20 @@ def deEmojify(inputString):
 
 class Parse:
 
-    def __init__(self):
+    def __init__(self,prsondic,stmmer=False):
         self.stop_words = stopwords.words('english')
-        self.secondStop_word =['rt','i','p','etc','https','http','oh','im','also']
+        self.secondStop_word =['rt','i','p','etc','oh','im','also']
         #,'0','1','2','3','4','5','6','7','8','9'
         self.stop_words=self.stop_words+self.secondStop_word
-        self.personadic ={}
+        self.personadic =prsondic
         self.positiondic={}
+        self.stmmer=stmmer
         self.stemmer= Stemmer()
+        self.doc2bowcount=0
+        self.tweetcount=0
+        self.tweet2doc={}
+        self.tweetlist=[]
+        self.dictionary=[]
 
     def parse_sentence(self, text,tweetId=""):
         """
@@ -73,6 +86,8 @@ class Parse:
         :param text:
         :return:
         """
+        nonBreakSpace = u'\xa0'
+        text = text.replace(nonBreakSpace, ' ')
         #text_prsona = get_continuous_chunks(text)
         text=deEmojify(text)
      #   print(self.stop_words)
@@ -88,61 +103,102 @@ class Parse:
         return text_tokens_without_stopwords'''
 
         return_parse=[]
-        #text='RT @revathitweets: Will we get any answers? #TelanganaCovidTruth #WhereIsKCR  https://www.instagram.com/p/CD7fAPWs3WM/?igshid=o9kf0ugp1l8x'
-        #text = 'RT 1.1.22 5 percent 3/4 #TelanganaCovid202..0 ...55.2165 million @revathit.......weets: Will we, get. 1.05.2000 trouble troubling troubled'
+        #text='RT @revathitweets: Will we 55.get any answers? #TelanganaCovidTruth #WhereIsKCR https://t.co/i8IdrIKp2B https://www.instagram.com/p/CD7fAPWs3WM/?igshid=o9kf0ugp1l8x'
+        #text = 'RT #b.o.b. #matchedset… https://instagram.com/p/CCadwNjDKai/?igshid=1tfptbed95bln/… 5/5/2020 8/7/20'
         char_to_remove=['.',',','…','\n','?','/',' ','=']
         '''for char in char_to_remove:
             text=text.replace(char,'')'''
         numricset=['thousand','million','billion']
         webBuzzWord=["http","https","www"]
-        text=re.sub('\.\.+', '', text)
+        text=re.sub('\.\.+', '.', text)
+        text = re.sub('\_\_+', '_', text)
         text=text.replace('\r','')
-        text_tokens = re.split("[ \-!?:=\n()\"'~*\|“…”{}\[\]‘]+",text)
-        #text_tokens= self.stemmer.stem_term(text_tokens)
 
+        text = text.replace('\\', '')
+        text_tokens = re.split("[ \-!?:=\n()$&`^\+\"'%;~*\|“…”{}\[\]‘]+",text)
+        #text_tokens= self.stemmer.stem_term(text_tokens)
 
         word = 0
         lenTokens=len(text_tokens)
         while word < lenTokens:
-
-            if(len(text_tokens[word].replace("#",""))<2 ):
+            if (text_tokens[word].count('.') == 1):
+                split = text_tokens[word].split('.')
+                if (split[0].replace(',',"").isnumeric() and not (split[1].isnumeric())) or\
+                        ((not split[0].isnumeric() and  (split[1].replace(',',"").isnumeric()))) or\
+                        ((not (split[1].isnumeric())) and not (split[1].isnumeric())):
+                    text_tokens[word]=split[0]
+                    text_tokens.insert(word+1,split[1])
+            if (text_tokens[word].count('/') == 1):
+                split = text_tokens[word].split('/')
+                if ((not (split[1].isnumeric())) and not (split[1].isnumeric())):
+                    text_tokens[word]=split[0]
+                    text_tokens.insert(word+1,split[1])
+            if(len(text_tokens[word].replace("#",""))<2 and not text_tokens[word].isnumeric()):
                 word+=1
-
+            elif (text_tokens[word]==",,,"):
+                word+=1
             elif(text_tokens[word].lower() in self.stop_words):
                 word += 1
-
+            elif (text_tokens[word][0]=='_' or text_tokens[word][0]==','):
+                text_tokens[word]=text_tokens[word][1:]
             elif (text_tokens[word][0]).isupper():
                 tempprona=text_tokens[word]
-                temp = re.sub("[,/.’#'\"]+", '', text_tokens[word])
-                return_parse+=[temp]
+                temp = re.sub("[,_/.’#'\"]+", '', text_tokens[word])
+                #return_parse+=[temp]
                 word+=1
                 while word < lenTokens and text_tokens[word]!="" and (text_tokens[word][0]).isupper():
-                    temp = re.sub("[,/.’#'\"]+", '', text_tokens[word])
-                    return_parse += [temp]
+                    temp = re.sub("[ _,/.’#'\"]+", '', text_tokens[word])
+                    #return_parse += [temp]
                     tempprona+=" " +text_tokens[word]
                     word+=1
-                if(self.personadic.get(tempprona)):
-                    if((self.personadic[tempprona]).get(tweetId)):
-                        self.personadic[tempprona][tweetId]+=1
+                for text in tempprona.split(","):
+                    if len(text) < 1:
+                        continue
+                    if(text[0]==" "):
+                        text=text[1:]
+                    if len(text) < 2:
+                        continue
+                    if(text.isnumeric()):
+                        continue
+                    if(self.personadic.get(text)):
+                        if(self.personadic[text]>1):
+                            return_parse +=[text]
+                        if(len(text.split(" "))>1):
+                            for txt in text.split(" "):
+                                if(self.personadic.get(txt)):
+                                    txt = re.sub("[,_/.’#'\"]+", '', txt)
+                                    return_parse +=[txt]
+                                else:
+                                    if(txt.lower() not in self.stop_words):
+                                        txt = re.sub("[,/_.’#'\"]+", '', txt)
+                                        return_parse += [txt.lower()]
                     else:
-                        self.personadic[tempprona][tweetId] = 1
-                else:
-                    tempdic = {}
-                    tempdic[tweetId] = 1
-                    self.personadic[tempprona] =tempdic
+                        for txt in text.split(" "):
+                            if(self.personadic.get(txt)):
+                                txt = re.sub("[,/.’#'\"]+", '', txt)
+                                return_parse +=[txt]
+                            else:
+                                if (txt.lower() not in self.stop_words):
+                                    txt = re.sub("[,/.’#'\"]+", '', txt)
+                                    return_parse += [txt.lower()]
+                ''' if(self.personadic.get(text)):
+                        if(self.personadic[text][2].get(tweetId)):
+                            self.personadic[text][2][tweetId] += 1
+                            self.personadic[text][1]+=1
+                        else:
+                            self.personadic[text][2][tweetId] = 1
+                            self.personadic[text][0] += 1
+                            self.personadic[text][1] += 1
+                    else:
+                        tempdic = {}
+                        tempdic[tweetId] = 1
+                        self.personadic[text] =[1,1,tempdic]'''
 
-            elif re.match(r'^\d{2}\.\d{2}\.\d{4}$',text_tokens[word]) or re.match(r'^\d{2}\.\d{2}\.\d{2}$',text_tokens[word]) or\
-                    re.match(r'^\d{1}\.\d{2}\.\d{4}$',text_tokens[word]) or re.match(r'^\d{1}\.\d{2}\.\d{2}$',text_tokens[word]) or\
-                    re.match(r'^\d{2}\.\d{1}\.\d{4}$',text_tokens[word]) or re.match(r'^\d{2}\.\d{1}\.\d{2}$',text_tokens[word]) or\
-                    re.match(r'^\d{2}\/\d{2}\/\d{4}$',text_tokens[word]) or re.match(r'^\d{2}\/\d{2}\/\d{2}$', text_tokens[word]) or\
-                    re.match(r'^\d{1}\/\d{2}\/\d{4}$',text_tokens[word]) or re.match(r'^\d{1}\/\d{2}\/\d{2}$', text_tokens[word]) or\
-                    re.match(r'^\d{2}\/\d{1}\/\d{4}$',text_tokens[word]) or re.match(r'^\d{2}\/\d{1}\/\d{2}$', text_tokens[word]) or\
-                    re.match(r'^\d{1}\.\d{1}\.\d{4}$',text_tokens[word]) or re.match(r'^\d{1}\.\d{1}\.\d{2}$',text_tokens[word]) or\
-                    re.match(r'^\d{1}\/\d{1}\/\d{4}$',text_tokens[word]) or re.match(r'^\d{1}\/\d{1}\/\d{2}$',text_tokens[word]):
+            elif re.match(r'^\d{1,2}\.\d{1,2}\.\d{2,4}$',text_tokens[word]) or re.match(r'^\d{1,2}\/\d{1,2}\/\d{2,4}$',text_tokens[word]):
                 temp=text_tokens[word]
                 if('.' in text_tokens[word]):
                     temp=text_tokens[word].replace('.','/')
-                return_parse += temp
+                return_parse += [temp]
                 word += 1
             elif text_tokens[word][0]=='#':
 
@@ -152,11 +208,14 @@ class Parse:
                         if temp!="":
                             return_parse += [temp]
                     else:
-                        temp = re.sub("[ \-/:=\n()\"'~*\|“…”{}\[\]]+", '', text_tokens[word])
-                        return_parse+=wordSpertor(temp)
+                        temp = re.sub("[ \-./:=\n()\"'~*\|“…”{}\[\]]+", '', text_tokens[word])
+                        spertor=wordSpertor(temp)
+                        if(spertor!=False):
+                            return_parse+=wordSpertor(temp)
                 word += 1
             elif text_tokens[word] in webBuzzWord and lenTokens>word+1:
-                return_parse+=[text_tokens[word]]
+                if(text_tokens[word] not in ['http','https']):
+                    return_parse+=[text_tokens[word]]
                 tempUrl=text_tokens[word+1].split('/')
                 tempUrl=[x for x in tempUrl if x]
                 if len(tempUrl)==0:
@@ -164,14 +223,21 @@ class Parse:
                     continue
                 if 'www' in tempUrl[0]:
                     tempw = tempUrl[0].split('.')
-                    return_parse += [tempw[0]]
-                    return_parse += [tempw[1]+'.' + tempw[2]]
-                    for i in range(1,len(tempUrl)):
-                        return_parse +=[tempUrl[i]]
+                    if(len(tempw)>2):
+                        return_parse += [tempw[0]]
+                        return_parse += [tempw[1]+'.' + tempw[2]]
+                        for i in range(1,len(tempUrl)):
+                            if(len(tempUrl[i])>2):
+                                return_parse +=[tempUrl[i]]
+                    else:
+                        return_parse += [tempw[0]]
+                        if(len(tempw)==2):
+                            return_parse += [tempw[1]]
                 else:
                     return_parse += [tempUrl[0]]
                     for i in range(1,len(tempUrl)):
-                        return_parse +=[tempUrl[i]]
+                        if (len(tempUrl[i]) > 2):
+                            return_parse +=[tempUrl[i]]
 
                 word += 2
             elif (text_tokens[word].replace('.','').isnumeric()) and word+1<lenTokens and (text_tokens[word+1]=='percent' or text_tokens[word+1]=='percentage'):
@@ -230,12 +296,13 @@ class Parse:
                 word += 1
 
             else:
-                temp=re.sub("[,/.’#'\"]+",'',text_tokens[word])
+                temp=re.sub("[,/.’#/'\"]+",'',text_tokens[word])
                 if(temp!=""):
                     return_parse+=[temp]
                 word += 1
         #return_parse = [w for w in return_parse if w.lower() not in self.stop_words]
-        return_parse = self.stemmer.stem_term(return_parse)
+        if(self.stmmer):
+            return_parse = self.stemmer.stem_terms(return_parse)
         return return_parse
 
     def parse_doc(self, doc_as_list):
@@ -279,6 +346,20 @@ class Parse:
 
 
         doc_length = len(tokenized_text)  # after text operations.
+        ''' if self.doc2bowcount==0:
+            self.dictionary = Dictionary([tokenized_text])
+        else:
+            self.dictionary.add_documents([tokenized_text])
+
+        self.tweet2doc[self.tweetcount]=tweet_id
+        self.tweetcount+=1
+        self.tweetlist+=[tokenized_text]
+        self.doc2bowcount+=1
+        if(self.doc2bowcount==100000):
+            self.dictionary.save('dictionary'+str(self.tweetcount))
+            utils.save_obj(self.tweetlist,'tweetlist'+str(self.tweetcount))
+            self.tweetlist=[]
+            self.doc2bowcount=0'''
 
         maxFrecinDoc= 0
         docWordCount=0
