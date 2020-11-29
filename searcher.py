@@ -73,7 +73,6 @@ class Searcher:
         queryexsp = sorted(queryexsp, reverse=True, key=lambda item: item[0])
         print(queryexsp)
         posting_name = self.posting_name
-        posting_name += ["number.json"]
         #sort_query = sorted(query)
         relevant_docs = {}
         tfidfdic={}
@@ -85,10 +84,10 @@ class Searcher:
             if(tempdic.get(queryexsp[t][0])):
                 for tweet in tempdic[queryexsp[t][0]].items():
                     if (tfidfdic.get(tweet[0])):
-                        tfidfdic[tweet[0]][t] = ((tweet[1]) * math.log2(10000000 / self.inverted_index[queryexsp[t][0]][0]))*queryexsp[t][1]
+                        tfidfdic[tweet[0]][t] = ((tweet[1]) * math.log2(len(self.Docment_info) / self.inverted_index[queryexsp[t][0]][0]))*queryexsp[t][1]
                     else:
                         tfidfdic[tweet[0]] = [0] * len(queryexsp)
-                        tfidfdic[tweet[0]][t] = ((tweet[1]) * math.log2(10000000 / self.inverted_index[queryexsp[t][0]][0]))*queryexsp[t][1]
+                        tfidfdic[tweet[0]][t] = ((tweet[1]) * math.log2(len(self.Docment_info)  / self.inverted_index[queryexsp[t][0]][0]))*queryexsp[t][1]
             t+=1
 
         dq=[1]*len(queryexsp)

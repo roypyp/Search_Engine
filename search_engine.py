@@ -16,7 +16,7 @@ import json
 import os
 import utils
 
-def run_engine(steemr=False):
+def run_engine(corpus_path='C:\\files',steemr=False):
     """
 
     :return:
@@ -24,6 +24,7 @@ def run_engine(steemr=False):
     number_of_documents = 0
 
     config = ConfigClass()
+    config.corpusPath=corpus_path
     r = ReadFile(corpus_path=config.get__corpusPath())
     persondic=utils.load_obj("persona_dic")
     p = Parse(persondic,steemr)
@@ -51,9 +52,9 @@ def run_engine(steemr=False):
             elif number_of_documents == 100000:
                 print(number_of_documents)
             indexer.add_new_doc(parsed_document)
-            if(number_of_documents==100000*100):
+            if(number_of_documents==100000*1):
                 break
-        if (number_of_documents == 100000*100):
+        if (number_of_documents == 100000*1):
             break
     if(indexer.numofdocment!=0):
         indexer.saveondisk()
@@ -120,16 +121,30 @@ def search_and_rank_query(query, inverted_index, k,Docment_info=None,stemmer=Fal
     return searcher.ranker.retrieve_top_k(ranked_docs, k)
 
 
-def main():
+def main(corpus_path,output_path,stemming,queries,num_docs_to_retrieve):
     start_time = time.time()
     print("--- %s seconds ---" % (time.time() - start_time))
-    run_engine(True)
+    #run_engine(corpus_path,stemming)
     print("--- %s seconds ---" % (time.time() - start_time))
-    query = "soaking up the sun in Spain may quarantine"#input("Please enter a query: ")
-    k = 5#int(input("Please enter number of docs to retrieve: "))
+    query = queries#input("Please enter a query: ")
+    if isinstance(queries, list):
+        query = queries
+    else:
+        query =filetolist(queries)
+    k = num_docs_to_retrieve#int(input("Please enter number of docs to retrieve: "))
+    Docment_info = doc_info()
     inverted_index = load_index()
-    Docment_info= doc_info()
-    start_time = time.time()
-    for doc_tuple in search_and_rank_query(query, inverted_index, k,Docment_info,True):
-        print('tweet id: {}, score (unique common words with query): {}'.format(doc_tuple[0], doc_tuple[1]))
-    print("--- %s seconds ---" % (time.time() - start_time))
+    for q in query:
+        start_time = time.time()
+        for doc_tuple in search_and_rank_query(q, inverted_index, k,Docment_info,stemming):
+            print('tweet id: {}, score (unique common words with query): {}'.format(doc_tuple[0], doc_tuple[1]))
+        print("--- %s seconds ---" % (time.time() - start_time))
+
+def filetolist(q):
+    with open(q,encoding="utf-8") as f:
+        content = f.readlines()
+    query=[]
+    for line in content:
+        if(line!="\n" and line!=""and line!=" "):
+            query+=[line.replace("\n","")]
+    return query
