@@ -12,10 +12,14 @@ from gensim import similarities
 import time
 from nltk.corpus import wordnet
 import numpy as np
+from scipy import spatial
+
+from stemmer import Stemmer
+
 
 class Searcher:
 
-    def __init__(self, inverted_index,Docment_info=None,persondic={}):
+    def __init__(self, inverted_index,Docment_info=None,persondic={},stemmer=False):
         """
         :param inverted_index: dictionary of inverted index
         """
@@ -27,6 +31,8 @@ class Searcher:
         self.Docment_info=Docment_info
         posting_name = utils.load_obj("postingNames")
         self.posting_name = sorted(posting_name)
+        self.stemmerbool=stemmer
+        self.stemmer = Stemmer()
         #self.termPlacement = {}
 
 
@@ -39,16 +45,26 @@ class Searcher:
                 """
         queryexsp = []
         for word in query:
+            if (self.stemmerbool):
+                wname = self.stemmer.stem_term(word)
+            else:
+                wname = word
+            queryexsp += [(wname, 1)]
             for syn in wordnet.synsets(word):
                 w = wordnet.synsets(word)[0]
                 for l in syn.lemmas():
-                    if l.name()==word:
-                      queryexsp+=[(word,1)]
+                    if(self.stemmerbool):
+                        lname=self.stemmer.stem_term(l.name())
+                    else:
+                        lname=l.name()
+                    if l.name()==word or l.name().lower()==word or wname==lname:
+                      queryexsp+=[(lname,1)]
                     else:
                         w2 = wordnet.synsets(l.name())[0]
                         score=w.wup_similarity(w2)
-                        if(score!=None and score>0.65):
-                            queryexsp.append((l.name(), score*0.85))
+                        if(score!=None and score>0.5):
+                            if(len(l.name().replace("_"," ").replace("-"," ").split())==1):
+                                queryexsp.append((lname, score*0.9))
             #queryexsp = [t for t in queryexsp if t[1] != None]
 
 
@@ -69,10 +85,10 @@ class Searcher:
             if(tempdic.get(queryexsp[t][0])):
                 for tweet in tempdic[queryexsp[t][0]].items():
                     if (tfidfdic.get(tweet[0])):
-                        tfidfdic[tweet[0]][t] = ((tweet[1]) * math.log2(500000 / self.inverted_index[queryexsp[t][0]][0]))*queryexsp[t][1]
+                        tfidfdic[tweet[0]][t] = ((tweet[1]) * math.log2(10000000 / self.inverted_index[queryexsp[t][0]][0]))*queryexsp[t][1]
                     else:
                         tfidfdic[tweet[0]] = [0] * len(queryexsp)
-                        tfidfdic[tweet[0]][t] = ((tweet[1]) * math.log2(500000 / self.inverted_index[queryexsp[t][0]][0]))*queryexsp[t][1]
+                        tfidfdic[tweet[0]][t] = ((tweet[1]) * math.log2(10000000 / self.inverted_index[queryexsp[t][0]][0]))*queryexsp[t][1]
             t+=1
 
         dq=[1]*len(queryexsp)
@@ -81,6 +97,7 @@ class Searcher:
         A=np.array(list(tfidfdic.values()))
         tweets=list(tfidfdic.keys())
         cos_sim = np.dot(A, dq) / (np.linalg.norm(dq) * np.linalg.norm(A))
+        #cos_sim=1 - spatial.distance.cosine(A, dq)
         tweetcos=zip(tweets,cos_sim)
         tweetcos=set(tweetcos)
         relevant_docs=sorted(tweetcos, reverse=True,key=lambda item:item[1])

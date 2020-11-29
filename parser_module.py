@@ -103,6 +103,7 @@ class Parse:
         return text_tokens_without_stopwords'''
 
         return_parse=[]
+        return_num=[]
         #text='RT @revathitweets: Will we 55.get any answers? #TelanganaCovidTruth #WhereIsKCR https://t.co/i8IdrIKp2B https://www.instagram.com/p/CD7fAPWs3WM/?igshid=o9kf0ugp1l8x'
         #text = 'RT #b.o.b. #matchedset… https://instagram.com/p/CCadwNjDKai/?igshid=1tfptbed95bln/… 5/5/2020 8/7/20'
         char_to_remove=['.',',','…','\n','?','/',' ','=']
@@ -198,7 +199,7 @@ class Parse:
                 temp=text_tokens[word]
                 if('.' in text_tokens[word]):
                     temp=text_tokens[word].replace('.','/')
-                return_parse += [temp]
+                return_num += [temp]
                 word += 1
             elif text_tokens[word][0]=='#':
 
@@ -226,28 +227,28 @@ class Parse:
                     if(len(tempw)>2):
                         return_parse += [tempw[0]]
                         return_parse += [tempw[1]+'.' + tempw[2]]
-                        for i in range(1,len(tempUrl)):
+                        '''for i in range(1,len(tempUrl)):
                             if(len(tempUrl[i])>2):
-                                return_parse +=[tempUrl[i]]
+                                return_parse +=[tempUrl[i]]'''
                     else:
                         return_parse += [tempw[0]]
                         if(len(tempw)==2):
                             return_parse += [tempw[1]]
                 else:
                     return_parse += [tempUrl[0]]
-                    for i in range(1,len(tempUrl)):
+                    '''for i in range(1,len(tempUrl)):
                         if (len(tempUrl[i]) > 2):
-                            return_parse +=[tempUrl[i]]
+                            return_parse +=[tempUrl[i]]'''
 
                 word += 2
             elif (text_tokens[word].replace('.','').isnumeric()) and word+1<lenTokens and (text_tokens[word+1]=='percent' or text_tokens[word+1]=='percentage'):
-                return_parse += [text_tokens[word]+'%']
+                return_num += [text_tokens[word]+'%']
                 word += 2
             elif text_tokens[word].isdigit() and lenTokens>word+1 and text_tokens[word + 1].replace("/", "").isdigit() and text_tokens[word + 1].count("/") == 1:
-                return_parse += [text_tokens[word] + " " + text_tokens[word + 1]]
+                return_num += [text_tokens[word] + " " + text_tokens[word + 1]]
                 word += 2
             elif (text_tokens[word].replace("/", "").isdigit() and text_tokens[word].count("/") == 1):
-                return_parse += [text_tokens[word]]
+                return_num += [text_tokens[word]]
                 word += 1
             elif (text_tokens[word].replace('.','').isnumeric()) and word+1<lenTokens and (text_tokens[word+1].lower() in numricset ):
                 temp=text_tokens[word+1].lower();
@@ -257,11 +258,11 @@ class Parse:
                     num=float(text_tokens[word].replace(",",""))
                     num = round(num, 3)
                 if(temp=='billion'):
-                    return_parse += [ str(num) + 'B']
+                    return_num += [ str(num) + 'B']
                 elif(temp=='million'):
-                    return_parse += [ str(num)  + 'M']
+                    return_num += [ str(num)  + 'M']
                 else:
-                    return_parse += [ str(num)  + 'K']
+                    return_num += [ str(num)  + 'K']
                 word += 2
             elif (text_tokens[word].replace(",","").replace('.','').isdigit() and text_tokens[word].count(".")<=1):
                 temp = float(text_tokens[word].replace(",",""))
@@ -271,28 +272,28 @@ class Parse:
                     else:
                         temp=temp/1000000000
                         temp = round(temp, 3)
-                    return_parse += [str(temp) + 'B']
+                    return_num += [str(temp) + 'B']
                 elif temp>=1000000:
                     if (temp % 1000000 == 0):
                         temp = int(temp / 1000000)
                     else:
                         temp = temp / 1000000
                         temp = round(temp, 3)
-                    return_parse += [str(temp) + 'M']
+                    return_num += [str(temp) + 'M']
                 elif temp>=1000:
                     if (temp % 1000 == 0):
                         temp = int(temp / 1000)
                     else:
                         temp = temp / 1000
                         temp = round(temp, 3)
-                    return_parse += [str(temp) + 'K']
+                    return_num += [str(temp) + 'K']
                 else:
                     if (temp % 1 == 0):
                         temp = int(temp / 1)
                     else:
                         temp = temp / 1
                         temp = round(temp, 3)
-                    return_parse += [ str(temp) ]
+                    return_num += [ str(temp) ]
                 word += 1
 
             else:
@@ -301,8 +302,16 @@ class Parse:
                     return_parse+=[temp]
                 word += 1
         #return_parse = [w for w in return_parse if w.lower() not in self.stop_words]
+        nostartorend=['.',',','_',' ',"-"]
+        return_parset=[]
+        for term in return_parse:
+            tempt = re.sub("[,\-_.’/'\"]+", '', term)
+            if (tempt == "" or len(tempt)<2):
+                    continue
+            return_parset+=[tempt]
         if(self.stmmer):
-            return_parse = self.stemmer.stem_terms(return_parse)
+            return_parset = self.stemmer.stem_terms(return_parset)
+        return_parse=return_parset+return_num
         return return_parse
 
     def parse_doc(self, doc_as_list):
@@ -322,7 +331,7 @@ class Parse:
         quote_url = doc_as_list[7]
         term_dict = {}
         tokenized_text = self.parse_sentence(full_text,tweet_id)
-        tokenized_text = [x for x in tokenized_text if x]
+        #tokenized_text = [x for x in tokenized_text if x]
         strtemp = ""
         '''for i in range(len(tokenized_text)):
             if ((tokenized_text[i][0]).isupper()):

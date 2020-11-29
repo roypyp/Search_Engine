@@ -138,13 +138,13 @@ class Indexer:
                     self.postingGenrate(filename, d1)
             else:
                 name+=1
-        olddic = self.getJson("number.json")
+        olddic = self.getJson("0-9~.json")
         for key in self.postingDictNum.keys():
             if olddic.get(key):
                 self.appendDic(olddic,self.postingDictNum,key)
             else:
                 olddic[key] = self.postingDictNum[key]
-        self.postingGenrate("number.json", olddic)
+        self.postingGenrate("0-9~.json", olddic)
 
     def appendDic(self,dic1,dic2,term):
         dic1[term].update(dic2[term])
@@ -184,6 +184,8 @@ class Indexer:
         # Go over each term in the doc
         self.numofdocment += 1
         for term in document_dictionary.keys():
+            if(term=='./'):
+                continue
             '''uniWordCount=0
             if(document_dictionary[term]==1):
                 uniWordCount+=1'''
@@ -226,28 +228,32 @@ class Indexer:
                 print('problem with the following key {}'.format(term[0]))
         self.DocmentInfo[document.tweet_id]=[document.infoForDoc]+[document.doc_length]+[len(document_dictionary)]
         if (self.numofdocment == 500000):
-            start_time = time.time()
-            if(self.firstposting):
-                filename = "A-Z~.json"
+            self.saveondisk()
+
+
+    def saveondisk(self):
+        start_time = time.time()
+        if (self.firstposting):
+            filename = "A-Z~.json"
+            self.postingNames += [filename]
+            self.postingGenrate(filename, {})
+            text = "a b c d e f g h i j k l m n o p q r s t u v w x y z"
+            name = ['@', '#'] + text.split()
+            for char in name:
+                filename = char + "-" + char + '~.json'
                 self.postingNames += [filename]
                 self.postingGenrate(filename, {})
-                text="a b c d e f g h i j k l m n o p q r s t u v w x y z"
-                name=['@','#']+ text.split()
-                for char in name:
-                    filename = char+"-"+char+'~.json'
-                    self.postingNames += [filename]
-                    self.postingGenrate(filename, {})
-                #self.fun1()
-                self.postingGenrate("number.json",{})
-                self.firstposting=False
-            #else:
-            self.fun2()
-            print("--- %s seconds ---" % (time.time() - start_time))
-            self.numofdocment = 0
-            self.postingDict={}
-            #self.postnumcounter+=len(self.postingDictNum)
-            self.postingDictNum={}
-
+            # self.fun1()
+            self.postingGenrate("0-9~.json", {})
+            self.postingNames += ["0-9~.json"]
+            self.firstposting = False
+        # else:
+        self.fun2()
+        print("--- %s seconds ---" % (time.time() - start_time))
+        self.numofdocment = 0
+        self.postingDict = {}
+        # self.postnumcounter+=len(self.postingDictNum)
+        self.postingDictNum = {}
     def add_Persona_Dic(self, dic):
         """
         This function perform indexing process for a document object.
